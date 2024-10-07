@@ -1,25 +1,65 @@
 import argparse
+import heapq
+import random
 
 
 class InfluenceGraph:
     def __init__(self, num_nodes):
-        self.__graph = {i: [] for i in range(num_nodes)}
+        self.__adj_dict = {i: [] for i in range(num_nodes)}
         self.__num_nodes = num_nodes
 
     def add_edge(self, u, v, probab_campaign1, probab_campaign2):
-        self.__graph[u].append((v, probab_campaign1, probab_campaign2))
+        self.__adj_dict[u].append((v, probab_campaign1, probab_campaign2))
 
     def get_neighbors(self, node):
-        return self.__graph[node]
+        return self.__adj_dict[node]
 
     def get_num_nodes(self):
         return self.__num_nodes
 
     def __str__(self):
-        return str(self.__graph)
+        return str(self.__adj_dict)
 
 
-def read_file_path_args():
+def monte_carlo_simulation(rep, graph, initial1, initial2, balanced1, balanced2):
+    res = 0
+
+    for _ in range(rep):
+        exposed1 = influence_diffusion(graph, initial1 | balanced1, 1)
+        exposed2 = influence_diffusion(graph, initial2 | balanced2, 2)
+        res += graph.get_num_nodes() - len(exposed1 ^ exposed2)
+
+    return res / rep
+
+
+def influence_diffusion(graph, seed, campaign):
+    queue = []
+    active = set()
+    exposed = set()
+
+    for node in seed:
+        heapq.heappush(queue, node)
+        active.add(node)
+        exposed.add(node)
+
+    while queue:
+        node = heapq.heappop(queue)
+        for neighbor_tuple in graph.get_neighbors(node):
+            neighbor = neighbor_tuple[0]
+            probab = neighbor_tuple[campaign]
+
+            if neighbor not in exposed:
+                exposed.add(neighbor)
+
+            if neighbor not in active:
+                if probab >= random.random():
+                    active.add(neighbor)
+                    queue.append(neighbor)
+
+    return exposed
+
+
+def read_user_args():
     parser = argparse.ArgumentParser(description="Evaluator for IEMP")
 
     parser.add_argument("-n", metavar="<social network>", required=True, dest="network_path",
@@ -43,7 +83,7 @@ def read_social_network_dataset(file_path):
 
         for line in f:
             u, v, probab_campaign1, probab_campaign2 = line.strip().split()
-            graph.add_edge(float(u), float(v), float(probab_campaign1), float(probab_campaign2))
+            graph.add_edge(int(u), int(v), float(probab_campaign1), float(probab_campaign2))
 
     return graph
 
@@ -55,20 +95,26 @@ def read_seed_dataset(file_path):
         set1_size, set2_size = f.readline().strip().split()
 
         for _ in range(int(set1_size)):
-            set1.add(f.readline().strip())
+            set1.add(int(f.readline().strip()))
 
         for _ in range(int(set2_size)):
-            set2.add(f.readline().strip())
+            set2.add(int(f.readline().strip()))
 
     return set1, set2
 
 
+def write_output(file_path, output_data):
+    with open(file_path, "w") as f:
+        f.write(str(output_data))
+
+
 def solve():
-    network_path, initial_seed_path, balanced_seed_path, k, output_path = read_file_path_args()
+    network_path, initial_seed_path, balanced_seed_path, k, output_path = read_user_args()
     graph = read_social_network_dataset(network_path)
     initial1, initial2 = read_seed_dataset(initial_seed_path)
     balanced1, balanced2 = read_seed_dataset(balanced_seed_path)
-    print(graph)
+    obj_val = monte_carlo_simulation(500, graph, initial1, initial2, balanced1, balanced2)
+    write_output(output_path, obj_val)
 
 
 if __name__ == "__main__":
