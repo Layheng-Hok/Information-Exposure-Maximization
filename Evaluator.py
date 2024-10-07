@@ -44,6 +44,7 @@ def influence_diffusion(graph, seed, campaign):
 
     while queue:
         node = heapq.heappop(queue)
+
         for neighbor_tuple in graph.get_neighbors(node):
             neighbor = neighbor_tuple[0]
             probab = neighbor_tuple[campaign]
