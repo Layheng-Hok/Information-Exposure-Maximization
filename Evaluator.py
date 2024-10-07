@@ -21,18 +21,18 @@ class InfluenceGraph:
         return str(self.__adj_dict)
 
 
-def monte_carlo_simulation(rep, graph, initial1, initial2, balanced1, balanced2):
+def simulate_monte_carlo(rep, graph, initial1, initial2, balanced1, balanced2):
     res = 0
 
     for _ in range(rep):
-        exposed1 = influence_diffusion(graph, initial1 | balanced1, 1)
-        exposed2 = influence_diffusion(graph, initial2 | balanced2, 2)
+        exposed1 = diffuse_influence(graph, initial1 | balanced1, 1)
+        exposed2 = diffuse_influence(graph, initial2 | balanced2, 2)
         res += graph.get_num_nodes() - len(exposed1 ^ exposed2)
 
     return res / rep
 
 
-def influence_diffusion(graph, seed, campaign):
+def diffuse_influence(graph, seed, campaign):
     queue = []
     active = set()
     exposed = set()
@@ -114,7 +114,7 @@ def solve():
     graph = read_social_network_dataset(network_path)
     initial1, initial2 = read_seed_dataset(initial_seed_path)
     balanced1, balanced2 = read_seed_dataset(balanced_seed_path)
-    obj_val = monte_carlo_simulation(500, graph, initial1, initial2, balanced1, balanced2)
+    obj_val = simulate_monte_carlo(500, graph, initial1, initial2, balanced1, balanced2)
     write_output(output_path, obj_val)
 
 
@@ -124,10 +124,10 @@ if __name__ == "__main__":
 '''
     user args instance:
         map1: 
-            terminal: python Evaluator.py -n ./test/Evaluator/map1/dataset1 -i ./test/Evaluator/map1/seed -b ./test/Evaluator/map1/seed_balanced -k 15 -o ./test/Evaluator/map1/object_value
-            PyCharm: -n ./test/Evaluator/map1/dataset1 -i ./test/Evaluator/map1/seed -b ./test/Evaluator/map1/seed_balanced -k 15 -o ./test/Evaluator/map1/object_value
+            terminal: python Evaluator.py -n ./test/Evaluator/map1/dataset1 -i ./test/Evaluator/map1/seed -b ./test/Evaluator/map1/seed_balanced -k 15 -o ./test/Evaluator/map1/output
+            PyCharm: -n ./test/Evaluator/map1/dataset1 -i ./test/Evaluator/map1/seed -b ./test/Evaluator/map1/seed_balanced -k 15 -o ./test/Evaluator/map1/output
         map2:
-            terminal: python Evaluator.py -n ./test/Evaluator/map2/dataset2 -i ./test/Evaluator/map2/seed -b ./test/Evaluator/map2/seed_balanced -k 15 -o ./test/Evaluator/map2/object_value
-            PyCharm: -n ./test/Evaluator/map2/dataset2 -i ./test/Evaluator/map2/seed -b ./test/Evaluator/map2/seed_balanced -k 15 -o ./test/Evaluator/map2/object_value
+            terminal: python Evaluator.py -n ./test/Evaluator/map2/dataset2 -i ./test/Evaluator/map2/seed -b ./test/Evaluator/map2/seed_balanced -k 15 -o ./test/Evaluator/map2/output
+            PyCharm: -n ./test/Evaluator/map2/dataset2 -i ./test/Evaluator/map2/seed -b ./test/Evaluator/map2/seed_balanced -k 15 -o ./test/Evaluator/map2/output
         
 '''
