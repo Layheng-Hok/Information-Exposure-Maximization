@@ -1,6 +1,6 @@
 import argparse
-import heapq
 import random
+from collections import deque
 
 
 class InfluenceGraph:
@@ -33,17 +33,17 @@ def simulate_monte_carlo(rep, graph, initial1, initial2, balanced1, balanced2):
 
 
 def diffuse_influence(graph, seed, campaign):
-    queue = []
+    queue = deque()
     active = set()
     exposed = set()
 
     for node in seed:
-        heapq.heappush(queue, node)
+        queue.append(node)
         active.add(node)
         exposed.add(node)
 
     while queue:
-        node = heapq.heappop(queue)
+        node = queue.popleft()
 
         for neighbor_tuple in graph.get_neighbors(node):
             neighbor = neighbor_tuple[0]
@@ -114,7 +114,7 @@ def solve():
     graph = read_social_network_dataset(network_path)
     initial1, initial2 = read_seed_dataset(initial_seed_path)
     balanced1, balanced2 = read_seed_dataset(balanced_seed_path)
-    obj_val = simulate_monte_carlo(500, graph, initial1, initial2, balanced1, balanced2)
+    obj_val = simulate_monte_carlo(1000, graph, initial1, initial2, balanced1, balanced2)
     write_output(output_path, obj_val)
 
 
