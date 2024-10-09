@@ -25,14 +25,14 @@ def simulate_monte_carlo(rep, graph, initial1, initial2, balanced1, balanced2):
     res = 0
 
     for _ in range(rep):
-        exposed1 = diffuse_influence(graph, initial1 | balanced1, 1)
-        exposed2 = diffuse_influence(graph, initial2 | balanced2, 2)
+        exposed1 = diffuse_influence_bfs(graph, initial1 | balanced1, 1)
+        exposed2 = diffuse_influence_bfs(graph, initial2 | balanced2, 2)
         res += graph.get_num_nodes() - len(exposed1 ^ exposed2)
 
     return res / rep
 
 
-def diffuse_influence(graph, seed, campaign):
+def diffuse_influence_bfs(graph, seed, campaign):
     queue = deque()
     active = set()
     exposed = set()
@@ -96,10 +96,10 @@ def read_seed_dataset(file_path):
         set1_size, set2_size = f.readline().strip().split()
 
         for _ in range(int(set1_size)):
-            set1.add(int(f.readline().strip()))
+            set1.add(int(f.readline()))
 
         for _ in range(int(set2_size)):
-            set2.add(int(f.readline().strip()))
+            set2.add(int(f.readline()))
 
     return set1, set2
 
