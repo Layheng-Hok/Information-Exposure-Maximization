@@ -114,7 +114,7 @@ def solve():
     graph = read_social_network_dataset(network_path)
     initial1, initial2 = read_seed_dataset(initial_seed_path)
     balanced1, balanced2 = read_seed_dataset(balanced_seed_path)
-    obj_val = simulate_monte_carlo(1000, graph, initial1, initial2, balanced1, balanced2)
+    obj_val = simulate_monte_carlo(500, graph, initial1, initial2, balanced1, balanced2)
     write_output(output_path, obj_val)
 
 
