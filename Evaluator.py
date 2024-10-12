@@ -27,7 +27,8 @@ def simulate_monte_carlo(rep, graph, initial1, initial2, balanced1, balanced2):
     for _ in range(rep):
         exposed1 = diffuse_influence_bfs(graph, initial1 | balanced1, 1)
         exposed2 = diffuse_influence_bfs(graph, initial2 | balanced2, 2)
-        res += graph.get_num_nodes() - len(exposed1 ^ exposed2)
+        phi = graph.get_num_nodes() - len(exposed1 ^ exposed2)
+        res += phi
 
     return res / rep
 
@@ -109,7 +110,7 @@ def write_output(file_path, output_data):
         f.write(str(output_data))
 
 
-def solve():
+def main():
     network_path, initial_seed_path, balanced_seed_path, k, output_path = read_user_args()
     graph = read_social_network_dataset(network_path)
     initial1, initial2 = read_seed_dataset(initial_seed_path)
@@ -119,7 +120,7 @@ def solve():
 
 
 if __name__ == "__main__":
-    solve()
+    main()
 
 '''
     user args instance:
@@ -128,6 +129,8 @@ if __name__ == "__main__":
             PyCharm: -n ./test/Evaluator/map1/dataset1 -i ./test/Evaluator/map1/seed -b ./test/Evaluator/map1/seed_balanced -k 15 -o ./test/Evaluator/map1/output
         map2:
             terminal: python Evaluator.py -n ./test/Evaluator/map2/dataset2 -i ./test/Evaluator/map2/seed -b ./test/Evaluator/map2/seed_balanced -k 15 -o ./test/Evaluator/map2/output
-            PyCharm: -n ./test/Evaluator/map2/dataset2 -i ./test/Evaluator/map2/seed -b ./test/Evaluator/map2/seed_balanced -k 15 -o ./test/Evaluator/map2/output
+            PyCharm: -n ./test/Evaluator/map2/dataset2 -i ./test/Evaluator/map2/seed -b ./test/Evaluator/map2/seed_balanced -k 15 -o ./test/Evaluator/map2/output   
+        for test:
+        -n ./test/Heuristic/map1/dataset1 -i ./test/Heuristic/map1/seed -b ./test/Heuristic/map1/seed_balanced -k 15 -o ./test/Heuristic/map1/output
         
 '''
