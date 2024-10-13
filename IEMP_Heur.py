@@ -50,16 +50,12 @@ class InfluenceGraph:
 
         for neighbor_tuple in self.__adj_dict[src]:
             neighbor = neighbor_tuple[0]
-
+            if neighbor not in exposed:
+                exposed_increment.add(neighbor)
             if neighbor not in active:
                 probab = neighbor_tuple[campaign]
-
-                if neighbor not in exposed:
-                    exposed_increment.add(neighbor)
-
-                if neighbor not in active:
-                    if probab >= random.random():
-                        active_increment.add(neighbor)
+                if probab >= random.random():
+                    active_increment.add(neighbor)
 
         return active_increment, exposed_increment
 
@@ -107,17 +103,17 @@ def monte_carlo_greedy_heuristic(graph, initial1, initial2, budget, rep):
         new_v1_max_val = -1
         new_v2_max_val = -1
 
-        for i in range(num_nodes):
-            if i in h1_rec:
-                h1_rec[i] /= rep
-                if h1_rec[i] > new_v1_max_val:
-                    new_v1_max_val = h1_rec[i]
-                    new_v1 = i
-            if i in h2_rec:
-                h2_rec[i] /= rep
-                if h2_rec[i] > new_v2_max_val:
-                    new_v2_max_val = h2_rec[i]
-                    new_v2 = i
+        for j in range(num_nodes):
+            if j in h1_rec:
+                h1_rec[j] /= rep
+                if h1_rec[j] > new_v1_max_val:
+                    new_v1_max_val = h1_rec[j]
+                    new_v1 = j
+            if j in h2_rec:
+                h2_rec[j] /= rep
+                if h2_rec[j] > new_v2_max_val:
+                    new_v2_max_val = h2_rec[j]
+                    new_v2 = j
 
         if new_v1 is not None and (new_v2 is None or h1_rec[new_v1] >= h2_rec[new_v2]):
             balanced1.add(new_v1)
