@@ -85,13 +85,13 @@ def monte_carlo_greedy_heuristic(graph, initial1, initial2, budget, rep):
 
             active1, exposed1 = graph.diffuse_influence_bfs(union1, 1)
             active2, exposed2 = graph.diffuse_influence_bfs(union2, 2)
+            phi_s1_s2 = compute_phi(num_nodes, exposed1, exposed2)
 
             for i in range(num_nodes):
                 if i not in balanced1 and i not in balanced2:
                     active1_increment, exposed1_increment = graph.diffuse_influence_from_a_node(i, active1, exposed1, 1)
                     active2_increment, exposed2_increment = graph.diffuse_influence_from_a_node(i, active2, exposed2, 2)
 
-                    phi_s1_s2 = compute_phi(num_nodes, exposed1, exposed2)
                     phi_s1vi_s2 = compute_phi(num_nodes, exposed1 | exposed1_increment, exposed2)
                     phi_s1_s2vi = compute_phi(num_nodes, exposed1, exposed2 | exposed2_increment)
 
