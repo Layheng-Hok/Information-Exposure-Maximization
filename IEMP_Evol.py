@@ -1,8 +1,8 @@
 import argparse
+from collections import deque
 
 import numpy as np
 
-N = 10
 GEN = 50
 POPULATION_SIZE = 90
 
@@ -15,66 +15,173 @@ class InfluenceGraph:
     def add_edge(self, u, v, probab_campaign1, probab_campaign2):
         self.adj_dict[u].append((v, probab_campaign1, probab_campaign2))
 
+    def diffuse_influence_bfs(self, seed, campaign):
+        queue = deque()
+        active = set()
+        exposed = set()
+
+        for node in seed:
+            queue.append(node)
+            active.add(node)
+            exposed.add(node)
+
+        while queue:
+            node = queue.popleft()
+
+            for neighbor_tuple in self.adj_dict[node]:
+                neighbor = neighbor_tuple[0]
+                probab = neighbor_tuple[campaign]
+
+                if neighbor not in exposed:
+                    exposed.add(neighbor)
+
+                if neighbor not in active:
+                    if probab >= np.random.random():
+                        active.add(neighbor)
+                        queue.append(neighbor)
+
+        return exposed
+
+
+class BinaryRepresentation:
+    def __init__(self, binary_vector):
+        self.binary_vector = binary_vector
+        self.fitness_val = 0
+        self.halt = False
+
+    def __str__(self):
+        halt = "Halt: True" if self.halt else "Halt: False"
+        return f"(Fitness Value: {self.fitness_val}, {halt}, Binary Vector: {self.binary_vector})"
+
 
 def genetic_evol_algo(graph, initial1, initial2, budget):
-    gen0 = init_gen0(graph, budget)
-    pass
+    best_balanced1 = set()
+    best_balanced2 = set()
+    best_solution = None
+    gen = GEN
+
+    gen0, gen0_balanced1, gen0_balanced2 = init_gen0(graph, budget)
+    evaluate_fitness(graph, initial1, initial2, gen0_balanced1, gen0_balanced2, gen0, budget)
+    gen0.sort(key=lambda binary_representation: binary_representation.fitness_val, reverse=True)
+    parent_gen = gen0
+    best_solution = gen0[0]
+
+    while not best_solution.halt or --gen > 0:
+        next_gen = generate_offspring()
+        pass
+
+    return best_balanced1, best_balanced2
 
 
 def init_gen0(graph, budget):
-    list(graph.adj_dict.keys())
     population = []
+    population_balanced1 = []
+    population_balanced2 = []
 
     random_population_size = 2 * POPULATION_SIZE // 9
-    good_population_size = 4 * POPULATION_SIZE // 9
-    bad_population_size = 3 * POPULATION_SIZE // 9
+    controlled_random_population_size = 4 * POPULATION_SIZE // 9
+    ideal_population_size = 3 * POPULATION_SIZE // 9
 
-    # for i in range(random_population_size):
-    #     binary_vector = np.zeros(2 * graph.num_nodes, dtype=bool)
-    #     true_cnt = 0
-    #     for j in range(len(binary_vector)):
-    #         if np.random.random() < np.random.random():
-    #             binary_vector[j] = True
-    #             true_cnt += 1
-    #     population.append(binary_vector)
-    #     print(true_cnt)
-
-    for i in range(random_population_size):
+    print("random population:")
+    for _ in range(random_population_size):
         binary_vector = np.zeros(2 * graph.num_nodes, dtype=bool)
+        balanced1 = set()
+        balanced2 = set()
+        num_added_nodes = np.random.randint(budget // 3, budget + budget // 2)
         true_cnt = 0
-        l = np.random.randint(0, graph.num_nodes // 3)
-        for j in range(l):
+
+        for _ in range(num_added_nodes):
             random_node = np.random.randint(0, 2 * graph.num_nodes)
             binary_vector[random_node] = True
+            balanced1.add(random_node) if random_node < graph.num_nodes else balanced2.add(
+                random_node % graph.num_nodes)
             true_cnt += 1
-        population.append(binary_vector)
+
+        population.append(BinaryRepresentation(binary_vector))
+        population_balanced1.append(balanced1)
+        population_balanced2.append(balanced2)
         print(true_cnt)
 
-    for i in range(good_population_size):
+    print("controlled random population:")
+    for _ in range(controlled_random_population_size):
         binary_vector = np.zeros(2 * graph.num_nodes, dtype=bool)
+        balanced1 = set()
+        balanced2 = set()
+        num_added_nodes = np.random.randint(budget // 2, budget)
         true_cnt = 0
-        j = 0
-        while j != budget:
+
+        for _ in range(num_added_nodes):
+            random_node = np.random.randint(0, 2 * graph.num_nodes)
+            binary_vector[random_node] = True
+            balanced1.add(random_node) if random_node < graph.num_nodes else balanced2.add(
+                random_node % graph.num_nodes)
+            true_cnt += 1
+
+        population.append(BinaryRepresentation(binary_vector))
+        population_balanced1.append(balanced1)
+        population_balanced2.append(balanced2)
+        print(true_cnt)
+
+    print("ideal population:")
+    for _ in range(ideal_population_size):
+        binary_vector = np.zeros(2 * graph.num_nodes, dtype=bool)
+        balanced1 = set()
+        balanced2 = set()
+        i = 0
+        true_cnt = 0
+
+        while i != budget:
             random_node = np.random.randint(0, 2 * graph.num_nodes)
             if not binary_vector[random_node]:
                 binary_vector[random_node] = True
-                j += 1
+                balanced1.add(random_node) if random_node < graph.num_nodes else balanced2.add(
+                    random_node % graph.num_nodes)
+                i += 1
                 true_cnt += 1
-        population.append(binary_vector)
+
+        population.append(BinaryRepresentation(binary_vector))
+        population_balanced1.append(balanced1)
+        population_balanced2.append(balanced2)
         print(true_cnt)
 
-    for i in range(bad_population_size):
-        binary_vector = np.zeros(2 * graph.num_nodes, dtype=bool)
-        true_cnt = 0
-        l = np.random.randint(0, budget + graph.num_nodes // 3)
-        for j in range(l):
-            random_node = np.random.randint(0, 2 * graph.num_nodes)
-            binary_vector[random_node] = True
-            true_cnt += 1
-        population.append(binary_vector)
-        print(true_cnt)
+    print("population size:" + str(len(population)))
 
-    return population
+    return population, population_balanced1, population_balanced2
+
+
+def evaluate_fitness(graph, initial1, initial2, population_balanced1, population_balanced2, population, budget):
+    for i in range(POPULATION_SIZE):
+        sign = 1 if len(population_balanced1[i]) + len(population_balanced2[i]) <= budget else -1
+        population[i].fitness_val = sign * compute_phi(graph, initial1, initial2, population_balanced1[i],
+                                                       population_balanced2[i], 1)
+        if (halt_suspected(graph, population[i])):
+            rigorous_phi = compute_phi(graph, initial1, initial2, population_balanced1[i], population_balanced2[i], 100)
+            if rigorous_phi >= 0.99:
+                population[i].halt = True
+
+
+def generate_offspring():
+    pass
+
+
+def compute_phi(graph, initial1, initial2, balanced1, balanced2, rep):
+    res = 0
+
+    for _ in range(rep):
+        exposed1 = graph.diffuse_influence_bfs(initial1 | balanced1, 1)
+        exposed2 = graph.diffuse_influence_bfs(initial2 | balanced2, 2)
+        phi = graph.num_nodes - len(exposed1 ^ exposed2)
+        res += phi
+
+    return res / rep
+
+
+def halt_suspected(graph, solution):
+    return solution.fitness_val / graph.num_nodes >= 0.95
+
+
+def convert_binary_representation_to_set_representation(binary_representation):
+    pass
 
 
 def read_user_args():
@@ -124,7 +231,7 @@ def main():
     network_path, initial_seed_path, balanced_seed_path, k = read_user_args()
     graph = read_social_network_dataset(network_path)
     initial1, initial2 = read_seed_dataset(initial_seed_path)
-    genetic_evol_algo(graph, initial1, initial2, k)
+    balanced1, balanced2 = genetic_evol_algo(graph, initial1, initial2, k)
 
 
 if __name__ == "__main__":
