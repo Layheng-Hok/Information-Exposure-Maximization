@@ -5,6 +5,7 @@ import numpy as np
 
 GEN = 50
 POPULATION_SIZE = 90
+MUTATION_RATE = 0.2
 
 
 class InfluenceGraph:
@@ -58,17 +59,22 @@ def genetic_evol_algo(graph, initial1, initial2, budget):
     best_balanced1 = set()
     best_balanced2 = set()
     best_solution = None
-    gen = GEN
 
     gen0, gen0_balanced1, gen0_balanced2 = init_gen0(graph, budget)
     evaluate_fitness(graph, initial1, initial2, gen0_balanced1, gen0_balanced2, gen0, budget)
     gen0.sort(key=lambda binary_representation: binary_representation.fitness_val, reverse=True)
-    parent_gen = gen0
     best_solution = gen0[0]
+    current_gen = gen0
 
-    while not best_solution.halt or --gen > 0:
-        next_gen = generate_offspring()
-        pass
+    for _ in range(GEN - 1):
+        if best_solution.halt:
+            break
+        parent_gen = filter_parents(current_gen)
+        next_gen, next_gen_balanced1, next_gen_balanced2 = generate_offspring(graph, parent_gen)
+        evaluate_fitness(graph, initial1, initial2, next_gen_balanced1, next_gen_balanced2, next_gen, budget)
+        next_gen.sort(key=lambda binary_representation: binary_representation.fitness_val, reverse=True)
+        best_solution = next_gen[0]
+        current_gen = next_gen
 
     return best_balanced1, best_balanced2
 
@@ -153,15 +159,91 @@ def evaluate_fitness(graph, initial1, initial2, population_balanced1, population
     for i in range(POPULATION_SIZE):
         sign = 1 if len(population_balanced1[i]) + len(population_balanced2[i]) <= budget else -1
         population[i].fitness_val = sign * compute_phi(graph, initial1, initial2, population_balanced1[i],
-                                                       population_balanced2[i], 1)
-        if (halt_suspected(graph, population[i])):
-            rigorous_phi = compute_phi(graph, initial1, initial2, population_balanced1[i], population_balanced2[i], 100)
-            if rigorous_phi >= 0.99:
+                                                       population_balanced2[i], 2)
+        if population[i].fitness_val / graph.num_nodes >= 0.98:
+            print("old fitness:", population[i].fitness_val)
+            population[i].fitness_val = sign * compute_phi(graph, initial1, initial2, population_balanced1[i],
+                                                           population_balanced2[i], 100)
+            print("new fitness:", population[i].fitness_val)
+            if population[i].fitness_val / graph.num_nodes >= 0.98:
                 population[i].halt = True
+                print("letz goo")
 
 
-def generate_offspring():
-    pass
+def filter_parents(population):
+    top_20 = population[:20]
+    mid_5 = population[40:45]
+    bottom_5 = population[85:]
+    return top_20 + mid_5 + bottom_5
+
+
+def generate_offspring(graph, parent_gen):
+    next_gen = parent_gen.copy()
+    next_gen_balanced1 = []
+    next_gen_balanced2 = []
+    num_parents = len(parent_gen)
+
+    for node in range(num_parents):
+        parent1 = parent_gen[node]
+
+        if node < 10:
+            j = node
+            while j == node:
+                j = np.random.randint(0, 10)
+            parent2 = parent_gen[j]
+            print(f"parent {node} breeds with parent {j}")
+        elif node < num_parents:
+            j = node
+            while j == node:
+                j = np.random.randint(0, num_parents)
+            print(f"parent {node} breeds with parent {j}")
+
+        offspring1, offspring2 = two_point_crossover_and_mutate(parent1, parent2)
+        next_gen.extend([offspring1, offspring2])
+
+    for binary_representation in next_gen:
+        binary_vector = binary_representation.binary_vector
+        balanced1 = set()
+        balanced2 = set()
+        for node in range(len(binary_vector)):
+            if binary_vector[node]:
+                balanced1.add(node) if node < graph.num_nodes else balanced2.add(node % graph.num_nodes)
+        next_gen_balanced1.append(balanced1)
+        next_gen_balanced2.append(balanced2)
+
+    return next_gen, next_gen_balanced1, next_gen_balanced2
+
+
+def two_point_crossover_and_mutate(parent1, parent2):
+    p1_vector = parent1.binary_vector
+    p2_vector = parent2.binary_vector
+    length = len(p1_vector)
+
+    point1 = np.random.randint(0, length - 1)
+    point2 = np.random.randint(point1 + 1, length)
+
+    offspring1_vector = np.copy(p1_vector)
+    offspring2_vector = np.copy(p2_vector)
+
+    offspring1_vector[point1:point2] = p2_vector[point1:point2]
+    offspring2_vector[point1:point2] = p1_vector[point1:point2]
+
+    offspring1_vector = flip_bit_mutate(offspring1_vector)
+    offspring2_vector = flip_bit_mutate(offspring2_vector)
+
+    offspring1 = BinaryRepresentation(offspring1_vector)
+    offspring2 = BinaryRepresentation(offspring2_vector)
+
+    return offspring1, offspring2
+
+
+def flip_bit_mutate(binary_vector):
+    num_bit_flips = np.random.randint(0, len(binary_vector))
+    for i in range(num_bit_flips):
+        if np.random.random() <= MUTATION_RATE:
+            bit_flip = np.random.randint(0, len(binary_vector))
+            binary_vector[bit_flip] = not binary_vector[bit_flip]
+    return binary_vector
 
 
 def compute_phi(graph, initial1, initial2, balanced1, balanced2, rep):
@@ -174,10 +256,6 @@ def compute_phi(graph, initial1, initial2, balanced1, balanced2, rep):
         res += phi
 
     return res / rep
-
-
-def halt_suspected(graph, solution):
-    return solution.fitness_val / graph.num_nodes >= 0.95
 
 
 def convert_binary_representation_to_set_representation(binary_representation):
