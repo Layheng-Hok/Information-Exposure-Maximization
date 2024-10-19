@@ -6,6 +6,7 @@ import numpy as np
 GEN = 50
 POPULATION_SIZE = 90
 MUTATION_RATE = 0.2
+HALT = 0.98
 
 
 class InfluenceGraph:
@@ -48,33 +49,38 @@ class BinaryRepresentation:
     def __init__(self, binary_vector):
         self.binary_vector = binary_vector
         self.fitness_val = 0
-        self.halt = False
 
     def __str__(self):
-        halt = "Halt: True" if self.halt else "Halt: False"
-        return f"(Fitness Value: {self.fitness_val}, {halt}, Binary Vector: {self.binary_vector})"
+        return f"(Fitness Value: {self.fitness_val}, Binary Vector: {self.binary_vector})"
 
 
-def genetic_evol_algo(graph, initial1, initial2, budget):
-    best_balanced1 = set()
-    best_balanced2 = set()
-    best_solution = None
-
+def genetic_evolutionary_algorithm(graph, initial1, initial2, budget):
     gen0, gen0_balanced1, gen0_balanced2 = init_gen0(graph, budget)
     evaluate_fitness(graph, initial1, initial2, gen0_balanced1, gen0_balanced2, gen0, budget)
     gen0.sort(key=lambda binary_representation: binary_representation.fitness_val, reverse=True)
-    best_solution = gen0[0]
     current_gen = gen0
 
+    best_balanced1, best_balanced2 = convert_binary_representation_to_set_representation(graph, gen0[0])
+    best_solution_val = compute_phi(graph, initial1, initial2, best_balanced1, best_balanced2, 150)
+
     for _ in range(GEN - 1):
-        if best_solution.halt:
+        if best_solution_val / graph.num_nodes >= HALT:
             break
+
         parent_gen = filter_parents(current_gen)
         next_gen, next_gen_balanced1, next_gen_balanced2 = generate_offspring(graph, parent_gen)
         evaluate_fitness(graph, initial1, initial2, next_gen_balanced1, next_gen_balanced2, next_gen, budget)
         next_gen.sort(key=lambda binary_representation: binary_representation.fitness_val, reverse=True)
-        best_solution = next_gen[0]
-        current_gen = next_gen
+
+        candidate_best_balanced1, candidate_best_balanced2 = convert_binary_representation_to_set_representation(graph,
+                                                                                                                 next_gen[
+                                                                                                                     0])
+        candidate_best_solution_val = compute_phi(graph, initial1, initial2, candidate_best_balanced1,
+                                                  candidate_best_balanced2, 150)
+        if candidate_best_solution_val > best_solution_val:
+            best_balanced1 = candidate_best_balanced1
+            best_balanced2 = candidate_best_balanced2
+            best_solution_val = candidate_best_solution_val
 
     return best_balanced1, best_balanced2
 
@@ -88,53 +94,43 @@ def init_gen0(graph, budget):
     controlled_random_population_size = 4 * POPULATION_SIZE // 9
     ideal_population_size = 3 * POPULATION_SIZE // 9
 
-    print("random population:")
     for _ in range(random_population_size):
         binary_vector = np.zeros(2 * graph.num_nodes, dtype=bool)
         balanced1 = set()
         balanced2 = set()
         num_added_nodes = np.random.randint(budget // 3, budget + budget // 2)
-        true_cnt = 0
 
         for _ in range(num_added_nodes):
             random_node = np.random.randint(0, 2 * graph.num_nodes)
             binary_vector[random_node] = True
             balanced1.add(random_node) if random_node < graph.num_nodes else balanced2.add(
                 random_node % graph.num_nodes)
-            true_cnt += 1
 
         population.append(BinaryRepresentation(binary_vector))
         population_balanced1.append(balanced1)
         population_balanced2.append(balanced2)
-        print(true_cnt)
 
-    print("controlled random population:")
     for _ in range(controlled_random_population_size):
         binary_vector = np.zeros(2 * graph.num_nodes, dtype=bool)
         balanced1 = set()
         balanced2 = set()
         num_added_nodes = np.random.randint(budget // 2, budget)
-        true_cnt = 0
 
         for _ in range(num_added_nodes):
             random_node = np.random.randint(0, 2 * graph.num_nodes)
             binary_vector[random_node] = True
             balanced1.add(random_node) if random_node < graph.num_nodes else balanced2.add(
                 random_node % graph.num_nodes)
-            true_cnt += 1
 
         population.append(BinaryRepresentation(binary_vector))
         population_balanced1.append(balanced1)
         population_balanced2.append(balanced2)
-        print(true_cnt)
 
-    print("ideal population:")
     for _ in range(ideal_population_size):
         binary_vector = np.zeros(2 * graph.num_nodes, dtype=bool)
         balanced1 = set()
         balanced2 = set()
         i = 0
-        true_cnt = 0
 
         while i != budget:
             random_node = np.random.randint(0, 2 * graph.num_nodes)
@@ -143,14 +139,10 @@ def init_gen0(graph, budget):
                 balanced1.add(random_node) if random_node < graph.num_nodes else balanced2.add(
                     random_node % graph.num_nodes)
                 i += 1
-                true_cnt += 1
 
         population.append(BinaryRepresentation(binary_vector))
         population_balanced1.append(balanced1)
         population_balanced2.append(balanced2)
-        print(true_cnt)
-
-    print("population size:" + str(len(population)))
 
     return population, population_balanced1, population_balanced2
 
@@ -159,15 +151,7 @@ def evaluate_fitness(graph, initial1, initial2, population_balanced1, population
     for i in range(POPULATION_SIZE):
         sign = 1 if len(population_balanced1[i]) + len(population_balanced2[i]) <= budget else -1
         population[i].fitness_val = sign * compute_phi(graph, initial1, initial2, population_balanced1[i],
-                                                       population_balanced2[i], 2)
-        if population[i].fitness_val / graph.num_nodes >= 0.98:
-            print("old fitness:", population[i].fitness_val)
-            population[i].fitness_val = sign * compute_phi(graph, initial1, initial2, population_balanced1[i],
-                                                           population_balanced2[i], 100)
-            print("new fitness:", population[i].fitness_val)
-            if population[i].fitness_val / graph.num_nodes >= 0.98:
-                population[i].halt = True
-                print("letz goo")
+                                                       population_balanced2[i], 10)
 
 
 def filter_parents(population):
@@ -191,23 +175,16 @@ def generate_offspring(graph, parent_gen):
             while j == node:
                 j = np.random.randint(0, 10)
             parent2 = parent_gen[j]
-            print(f"parent {node} breeds with parent {j}")
         elif node < num_parents:
             j = node
             while j == node:
                 j = np.random.randint(0, num_parents)
-            print(f"parent {node} breeds with parent {j}")
 
         offspring1, offspring2 = two_point_crossover_and_mutate(parent1, parent2)
         next_gen.extend([offspring1, offspring2])
 
     for binary_representation in next_gen:
-        binary_vector = binary_representation.binary_vector
-        balanced1 = set()
-        balanced2 = set()
-        for node in range(len(binary_vector)):
-            if binary_vector[node]:
-                balanced1.add(node) if node < graph.num_nodes else balanced2.add(node % graph.num_nodes)
+        balanced1, balanced2 = convert_binary_representation_to_set_representation(graph, binary_representation)
         next_gen_balanced1.append(balanced1)
         next_gen_balanced2.append(balanced2)
 
@@ -258,8 +235,16 @@ def compute_phi(graph, initial1, initial2, balanced1, balanced2, rep):
     return res / rep
 
 
-def convert_binary_representation_to_set_representation(binary_representation):
-    pass
+def convert_binary_representation_to_set_representation(graph, binary_representation):
+    binary_vector = binary_representation.binary_vector
+    balanced1 = set()
+    balanced2 = set()
+
+    for node in range(len(binary_vector)):
+        if binary_vector[node]:
+            balanced1.add(node) if node < graph.num_nodes else balanced2.add(node % graph.num_nodes)
+
+    return balanced1, balanced2
 
 
 def read_user_args():
@@ -305,11 +290,20 @@ def read_seed_dataset(file_path):
     return set1, set2
 
 
+def write_seed_output(file_path, seed1, seed2):
+    output_str = f"{len(seed1)} {len(seed2)}\n"
+    output_str += "\n".join(str(i) for i in seed1) + "\n"
+    output_str += "\n".join(str(i) for i in seed2) + "\n"
+    with open(file_path, "w") as f:
+        f.write(output_str)
+
+
 def main():
     network_path, initial_seed_path, balanced_seed_path, k = read_user_args()
     graph = read_social_network_dataset(network_path)
     initial1, initial2 = read_seed_dataset(initial_seed_path)
-    balanced1, balanced2 = genetic_evol_algo(graph, initial1, initial2, k)
+    balanced1, balanced2 = genetic_evolutionary_algorithm(graph, initial1, initial2, k)
+    write_seed_output(balanced_seed_path, balanced1, balanced2)
 
 
 if __name__ == "__main__":
@@ -317,6 +311,7 @@ if __name__ == "__main__":
 
 '''
     user args instance:
+    IEMP_Evol:
         map1: 
             terminal: python IEMP_Evol.py -n ./test/Evolutionary/map1/dataset1 -i ./test/Evolutionary/map1/seed -b ./test/Evolutionary/map1/seed_balanced -k 10
             PyCharm: -n ./test/Evolutionary/map1/dataset1 -i ./test/Evolutionary/map1/seed -b ./test/Evolutionary/map1/seed_balanced -k 10
@@ -329,5 +324,10 @@ if __name__ == "__main__":
         map4:
             terminal: python IEMP_Evol.py -n ./test/Evolutionary/map4/dataset4 -i ./test/Evolutionary/map4/seed -b ./test/Evolutionary/map4/seed_balanced -k 2
             PyCharm: -n ./test/Evolutionary/map4/dataset4 -i ./test/Evolutionary/map4/seed -b ./test/Evolutionary/map4/seed_balanced -k 2
+    Evaluator:
+        map1:
+            PyCharm: -n ./test/Evolutionary/map1/dataset1 -i ./test/Evolutionary/map1/seed -b ./test/Evolutionary/map1/seed_balanced -k 10 -o ./test/Evolutionary/map1/output
+        map2:
+            PyCharm: -n ./test/Evolutionary/map2/dataset2 -i ./test/Evolutionary/map2/seed -b ./test/Evolutionary/map2/seed_balanced -k 14 -o ./test/Evolutionary/map2/output
 
 '''
