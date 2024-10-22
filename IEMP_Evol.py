@@ -67,7 +67,7 @@ def genetic_evolutionary_algorithm(graph, initial1, initial2, budget):
         if best_solution_val / graph.num_nodes >= HALT:
             break
 
-        parent_gen = filter_parents(current_gen)
+        parent_gen = choose_survivors(current_gen)
         next_gen, next_gen_balanced1, next_gen_balanced2 = generate_offspring(graph, parent_gen)
         evaluate_fitness(graph, initial1, initial2, next_gen_balanced1, next_gen_balanced2, next_gen, budget)
         next_gen.sort(key=lambda binary_representation: binary_representation.fitness_val, reverse=True)
@@ -154,7 +154,7 @@ def evaluate_fitness(graph, initial1, initial2, population_balanced1, population
                                                        population_balanced2[i], 10)
 
 
-def filter_parents(population):
+def choose_survivors(population):
     top_20 = population[:20]
     mid_5 = population[40:45]
     bottom_5 = population[85:]
@@ -180,7 +180,7 @@ def generate_offspring(graph, parent_gen):
             while j == node:
                 j = np.random.randint(0, num_parents)
 
-        offspring1, offspring2 = two_point_crossover_and_mutate(parent1, parent2)
+        offspring1, offspring2 = apply_two_point_crossover_and_mutate(parent1, parent2)
         next_gen.extend([offspring1, offspring2])
 
     for binary_representation in next_gen:
@@ -191,7 +191,7 @@ def generate_offspring(graph, parent_gen):
     return next_gen, next_gen_balanced1, next_gen_balanced2
 
 
-def two_point_crossover_and_mutate(parent1, parent2):
+def apply_two_point_crossover_and_mutate(parent1, parent2):
     p1_vector = parent1.binary_vector
     p2_vector = parent2.binary_vector
     length = len(p1_vector)
@@ -205,8 +205,8 @@ def two_point_crossover_and_mutate(parent1, parent2):
     offspring1_vector[point1:point2] = p2_vector[point1:point2]
     offspring2_vector[point1:point2] = p1_vector[point1:point2]
 
-    offspring1_vector = flip_bit_mutate(offspring1_vector)
-    offspring2_vector = flip_bit_mutate(offspring2_vector)
+    offspring1_vector = apply_flip_bit_mutation(offspring1_vector)
+    offspring2_vector = apply_flip_bit_mutation(offspring2_vector)
 
     offspring1 = BinaryRepresentation(offspring1_vector)
     offspring2 = BinaryRepresentation(offspring2_vector)
@@ -214,7 +214,7 @@ def two_point_crossover_and_mutate(parent1, parent2):
     return offspring1, offspring2
 
 
-def flip_bit_mutate(binary_vector):
+def apply_flip_bit_mutation(binary_vector):
     num_bit_flips = np.random.randint(0, len(binary_vector))
     for i in range(num_bit_flips):
         if np.random.random() <= MUTATION_RATE:
