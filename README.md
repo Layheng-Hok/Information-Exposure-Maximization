@@ -78,9 +78,9 @@ In the halt condition of the evolutionary algorithm, we only ran independent cas
 | EA (With Halt) | 0.903 | 0.959 | 0.945 |
 
 <div>
-  <img src="https://github.com/Layheng-Hok/Information-Exposure-Maximization/blob/main/ref/img/Fig1.png" width="50%">
-  <img src="https://github.com/Layheng-Hok/Information-Exposure-Maximization/blob/main/ref/img/Fig2.png" width="50%">
-  <img src="https://github.com/Layheng-Hok/Information-Exposure-Maximization/blob/main/ref/img/Fig3.png" width="50%">
+  <img src="https://github.com/Layheng-Hok/Information-Exposure-Maximization/blob/main/ref/img/Fig1.png" width="70%">
+  <img src="https://github.com/Layheng-Hok/Information-Exposure-Maximization/blob/main/ref/img/Fig2.png" width="70%">
+  <img src="https://github.com/Layheng-Hok/Information-Exposure-Maximization/blob/main/ref/img/Fig3.png" width="70%">
 </div>
 
 ## Conclusion
